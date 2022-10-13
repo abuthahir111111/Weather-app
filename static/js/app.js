@@ -28,11 +28,11 @@ async function setResults(lat, lon, city) {
     let forecastData = await forecastResponse.json();
     let image = weatherBody.querySelector("img");
     let cityName = document.querySelector(".city-name");
+    let temperature = document.querySelector(".temp");
+    let description = document.querySelector(".description");
     image.src = `http://openweathermap.org/img/w/${forecastData.weather[0].icon}.png`;
     cityName.textContent = city;
-    let temperature = document.querySelector(".temp");
     temperature.textContent = `${forecastData.main.temp}`;
-    let description = document.querySelector(".description");
     description.textContent = forecastData.weather[0].description;
 }
 
@@ -48,26 +48,14 @@ async function init() {
 function giveWeatherResults(lat, lon) {
     return async function(evt=null) {
         evt.stopPropagation();
-        console.log(lat, lon);
-        let url = `${forecastURL}?lat=${lat}&lon=${lon}&appid=6019d87e9d80f3888ab222f96b6de708&units=metric`;
-        let forecastResponse = await fetch(url);
-        let forecastData = await forecastResponse.json();
-        console.log(forecastData.main.temp, forecastData.main.feels_like, forecastData.weather[0].main, forecastData.weather[0].description, forecastData.weather[0].icon);
-        let image = weatherBody.querySelector("img");
-        let cityName = document.querySelector(".city-name");
-        image.src = `http://openweathermap.org/img/w/${forecastData.weather[0].icon}.png`;
-        cityName.textContent = this.textContent;
-        let temperature = document.querySelector(".temp");
-        temperature.textContent = `${forecastData.main.temp}`;
-        let description = document.querySelector(".description");
-        description.textContent = forecastData.weather[0].description;
+        await setResults(lat, lon, this.textContent);
         this.parentElement.remove();
     }
 }
 
 // location function
 function search(element=null) {
-    return async function(evt=null) {
+    return async function(evt) {
         evt.stopPropagation();
         let searchResults = document.querySelector(".search-results");
         if (!searchResults) {
@@ -76,30 +64,16 @@ function search(element=null) {
             form.appendChild(searchResults);
         }
         searchResults.innerHTML = "";
-        let parameters = {
-            method: "GET",
-            body: {
-                q: element.value,
-                appid: "6019d87e9d80f3888ab222f96b6de708",
-                limit: 5,
-            },
-        };
         try {
-            let searchResponse = await fetch(`${geocoderURL}?q=${parameters.body.q}&appid=${parameters.body.appid}&limit=${parameters.body.limit}`);
-            let searchData = await searchResponse.json();
+            let searchData = await searchCity(element.value);
             for (let city of searchData) {
-                let button = document.createElement("button");
-                button.type = "button";
-                button.classList.add("search-data");
-                button.textContent = `${city.name}`;
-                searchResults.append(button);
-                button.addEventListener('click', giveWeatherResults(city.lat, city.lon));
+                searchResults.innerHTML += `<button type="button" class="search-data">${city.name}</button>`;
+                searchResults.querySelectorAll(".search-data").forEach(button => {
+                    button.addEventListener('click', giveWeatherResults(city.lat, city.lon));
+                });
             }
-            console.log(searchData);
         }
-        catch(TypeError) {
-            console.log(TypeError.message);
-        }
+        catch(error) {console.log(error.message);}
     }
 }
 searchBar.addEventListener('input', search(searchBar));
